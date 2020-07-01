@@ -1,0 +1,23 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pulsar-producer
+spec:
+  template:
+    spec:
+      containers:
+      - name: pulsar-client
+        image: lanpulsar/producer:0.2
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: pulsarHost
+            value: pulsar://192.168.1.89:30552
+          - name: topic
+            value: persistent://public/default/demo3
+          - name: subscriptionName
+            value: demokeda
+          - name: count
+            value: '100'
+      restartPolicy: Never
+  backoffLimit: 4
+

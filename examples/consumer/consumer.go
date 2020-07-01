@@ -21,29 +21,19 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"time"
 
 	"github.com/apache/pulsar-client-go/pulsar"
 )
 
-func main() {
-	client, err := pulsar.NewClient(pulsar.ClientOptions{URL: "pulsar://localhost:6650"})
-	if err != nil {
-		log.Fatal(err)
-	}
+func doConsumer(consumer pulsar.Consumer, topic string, subscriptionName string) {
 
-	defer client.Close()
+	worked["1"] = "1"
 
-	consumer, err := client.Subscribe(pulsar.ConsumerOptions{
-		Topic:            "topic-1",
-		SubscriptionName: "my-sub",
-		Type:             pulsar.Shared,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer consumer.Close()
+	time.Sleep(time.Duration(1) * time.Second)
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 1; i++ {
 		msg, err := consumer.Receive(context.Background())
 		if err != nil {
 			log.Fatal(err)
@@ -55,7 +45,86 @@ func main() {
 		consumer.Ack(msg)
 	}
 
-	if err := consumer.Unsubscribe(); err != nil {
+	fmt.Println("begin Unsubscribe")
+
+	_, ok0 := worked["0"]
+	if !ok0 {
+		// if err := consumer.Unsubscribe(); err != nil {
+		// 	log.Fatal(err)
+		// }
+	}
+
+	delete(worked, "0")
+	delete(worked, "1")
+}
+
+var worked = make(map[string]string)
+
+func main() {
+
+	pulsarHost := os.Getenv("pulsarHost")
+	topic := os.Getenv("topic")
+	subscriptionName := os.Getenv("subscriptionName")
+
+	client, err := pulsar.NewClient(pulsar.ClientOptions{URL: pulsarHost})
+	if err != nil {
 		log.Fatal(err)
 	}
+
+	defer client.Close()
+
+	consumer, err := client.Subscribe(pulsar.ConsumerOptions{
+		Topic:             topic,
+		SubscriptionName:  subscriptionName,
+		Type:              pulsar.Shared,
+		ReceiverQueueSize: 1,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer consumer.Close()
+
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	worked["0"] = "0"
+
+	for {
+		select {
+		case <-ticker.C:
+			_, ok := worked["1"]
+			log.Println("********************worked:", worked)
+			if !ok {
+				go doConsumer(consumer, topic, subscriptionName)
+			}
+
+		}
+	}
+
+	// consumer, err := client.Subscribe(pulsar.ConsumerOptions{
+	// 	Topic:             topic,
+	// 	SubscriptionName:  subscriptionName,
+	// 	Type:              pulsar.Shared,
+	// 	ReceiverQueueSize: 1,
+	// })
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// defer consumer.Close()
+
+	// for i := 0; i < 10; i++ {
+	// 	msg, err := consumer.Receive(context.Background())
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+
+	// 	fmt.Printf("Received message msgId: %#v -- content: '%s'\n",
+	// 		msg.ID(), string(msg.Payload()))
+
+	// 	consumer.Ack(msg)
+	// }
+
+	// if err := consumer.Unsubscribe(); err != nil {
+	// 	log.Fatal(err)
+	// }
 }

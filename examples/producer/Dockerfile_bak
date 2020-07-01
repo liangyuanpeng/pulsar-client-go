@@ -1,0 +1,11 @@
+FROM golang:1.13-alpine3.10 AS builder
+WORKDIR /go/src 
+ENV GO111MODULE=on
+ENV GOPROXY=https://goproxy.cn
+ADD producer.go .
+#RUN apk add --no-cache glibc-devel gcc
+RUN go build -o /go/bin/producer producer.go
+
+FROM alpine:3.10
+COPY --from=builder /go/bin/producer /app/
+CMD ["/app/producer"]

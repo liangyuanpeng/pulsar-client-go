@@ -359,6 +359,7 @@ func (c *connection) WriteData(data []byte) {
 
 func (c *connection) internalWriteData(data []byte) {
 	c.log.Debug("Write data: ", len(data))
+	// c.log.Info("********************data:{}", data)
 	if _, err := c.cnx.Write(data); err != nil {
 		c.log.WithError(err).Warn("Failed to write on connection")
 		c.Close()
@@ -368,6 +369,9 @@ func (c *connection) internalWriteData(data []byte) {
 func (c *connection) writeCommand(cmd proto.Message) {
 	// Wire format
 	// [FRAME_SIZE] [CMD_SIZE][CMD]
+
+	// log.Infoln("*****lan.writeCommand:{}", cmd.String())
+
 	cmdSize := uint32(proto.Size(cmd))
 	frameSize := cmdSize + 4
 
